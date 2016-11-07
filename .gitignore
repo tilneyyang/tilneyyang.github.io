@@ -1,0 +1,11 @@
+*~
+*.py[co]
+*.swp
+*.dblite
+.pydevproject
+**/.settings/*
+*.class
+**/.idea/
+.idea/
+_site/
+.sass-cache/
