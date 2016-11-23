@@ -31,6 +31,24 @@ ticket:
 
 ### Response Generation
 Response Generation模块选择要表达给用户的概念(concepts), 并且计划用文本表达这些概念的表达方式.
+Generation task主要可以分为两个任务:*what to say*, 和*how to say it*. **Content planer**模块
+主要针对地一个问题, 决定最终展示给用户的内容, 如是问一个问题,还是直接给出一个答案. Content planning
+模块一般都被合并到Dialogue manager中.
+
+Language generation模块则是针对第二个任务,选择合适的句法结构和词语来表达所需要表达的意思. 实现
+language generation主要有两种方式: template-based generation和natural language generation. 在template-
+based generation中, 答案是一些预定义好的模板. 这些模板的大部分的词语都是固定好的,只有少部分的
+变量需要被generator赋值. 例如:
+```
+What time do you want to leave CITY-ORIG??
+Will you return to CITY-ORIG from CITY-DEST?
+```
+基于natural language generation的方式则接受dialogue manager(content planner)生成的需要表达给
+用户的意思的*表示(representation)*,直接生成答案.
+
+### Dialogue Manager
+Dialogue Manager控制整个对话系统的结构
+
 ## yige.ai
 
 
