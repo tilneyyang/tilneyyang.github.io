@@ -61,125 +61,176 @@ $$
 
 $$\frac {\partial h_j}{\partial h_{j-1}}$$ is the Jacobian Matrix of $$h_t = Wf(h_{t-1}) + W^{(hs)}x_{[t]}$$.
 
-
-
-The basic problem is that gradients propagated over many stages tend to either vanish \(most of the time\) or explode \(rarely, but with much damage to the optimization\). 
-Even if we assume that the parameters are such that the recurrent network is stable \(can store memories, with gradients not exploding\), the difficulty with long-term 
-dependencies arises from the exponentially smaller weights given to long-term interactions \(involving the multiplication of many Jacobians\) compared to short-term ones.
-
-Consider a simple RNN lacking inputs $$x$$ and nonlinear behavior.
-
 $$
-h^{(t)} = W^Th^{(t-1)}
-$$
-
-which could simplified to
-
-$$
-h^{(t)} = (W^t)^Th^{(0)}
+\dfrac {\partial h_j}{\partial h_{j-1}} = 
+\begin{bmatrix}
+\dfrac {\partial h_j}{\partial h_{j-1}^0} & \dfrac {\partial h_j}{\partial h_{j-1}^1} & \dots & \dfrac {\partial h_j}{\partial h_{j-1}^n}
+\end{bmatrix}
+= 
+\begin{bmatrix}
+\dfrac {\partial h_j^0}{\partial h_{j-1}^0} & \dfrac {\partial h_j^0}{\partial h_{j-1}^1} & \dots & \dfrac {\partial h_j^0}{\partial h_{j-1}^n} \\
+\dfrac {\partial h_j^1}{\partial h_{j-1}^0} & \dfrac {\partial h_j^1}{\partial h_{j-1}^1} & \dots & \dfrac {\partial h_j^1}{\partial h_{j-1}^n} \\
+\vdots & \vdots & \ddots & \vdots \\
+\dfrac {\partial h_j^n}{\partial h_{j-1}^0} & \dfrac {\partial h_j^n}{\partial h_{j-1}^1} & \dots & \dfrac {\partial h_j^n}{\partial h_{j-1}^n}
+\end{bmatrix}
 $$
 
-and if $$W$$ admits an eigendecomposition
+$$h_{j}^l$$ means the $$l$$-th element in vector $$h_j$$. Note, according to the definition of Jacobian, Given vector $$f$$ with length $$m$$ and $$x$$ with length $$n$$, the Jacobian
+ $$\dfrac{\partial \textbf{f}}{\partial \textbf{x}}$$ is a $$m \times n$$ matrix.
+
+Now consider the derivative of each element of the matrix $$\dfrac {\partial h_{j, m}}{\partial h_{j-1, n}}$$, because 
 
 $$
-W=Q{\Lambda}Q^T
+h_j^m = h_j^{[m,1]} = \sum_k W^{[m,k]}*f(h_{j-1})^{[k,1]}
 $$
 
-then recurrence may be simplified further to:
+where $$A^{[m,n]}$$ means the element at the $$m$$-th raw, $$n$$-th column of matrix $$A$$. The shapes of $$h_j \text{, } W \text{, } h_{j-1}$$ are $$m \times 1 \text{, } m \times m \text{, } m \times 1$$ respectively.
 
 $$
-h^{(t)} = Q^T{\Lambda}^{t}Qh^{(0)}
+\begin{align}
+\dfrac {\partial h_{j, m}}{\partial h_{j-1, n}} &= \dfrac{\partial}{\partial h_{j-1, n}} \sum_k W^{[m,k]}*f(h_{j-1}])^{[k,1]} \\ 
+&= W^{[m,k]}*f^{\prime}(h_{j-1})^{[k,1]} \\
+&= W^{[m,k]}*f^{\prime}(h_{j-1}^{[k,1]}) \\
+\end{align}
 $$
 
-The eigenvalues are raised to the power of $$t$$ causing eigenvalues with magnitude
-less than one to decay to zero and eigenvalues with magnitude greater than one to
-explode. Any component of $$h^{(0)}$$ that is not   aligned with the largest eigenvector will eventually be discarded.
+Note, $$f(\bullet)$$ is a pointwise non-linearty. Finally,
 
-Below we will talk about some methods to overcome the difficulty of learning long-term dependencies.
+$$
+\dfrac{\partial h_{j}}{\partial h_{j-1}} = 
+\begin{bmatrix}
+W^{[0,0]}*f^{\prime}(h_{j-1}^{[0,1]}) & W^{[0,1]}*f^{\prime}(h_{j-1}^{[1,1]}) & \dots & W^{[0,m]}*f^{\prime}(h_{j-1}^{[m,1]}) \\
+W^{[1,0]}*f^{\prime}(h_{j-1}^{[0,1]}) & W^{[1,1]}*f^{\prime}(h_{j-1}^{[1,1]}) & \dots & W^{[1,m]}*f^{\prime}(h_{j-1}^{[m,1]}) \\
+\vdots & \vdots & \ddots & \vdots \\
+W^{[m,0]}*f^{\prime}(h_{j-1}^{[0,1]}) & W^{[m,1]}*f^{\prime}(h_{j-1}^{[1,1]}) & \dots & W^{[m,m]}*f^{\prime}(h_{j-1}^{[m,1]})
+\end{bmatrix} 
+= Wdiag[f^{\prime}(h_{j-1})]
+$$
+
+where $$diag(z) =
+\begin{pmatrix}
+    z_0                                    \\
+      & z_1             &   & \text{0}\\
+      &               & \ddots                \\
+      & \text{0} &   & z_{n-1}            \\
+      &               &   &   & z_n
+\end{pmatrix}
+$$
+
+Analyzing the norm of the Jacobians,
+
+$$
+\| \dfrac{\partial h_j}{\partial h_{j-1}} \| \leq \|W\|\|diag[f^\prime (h_{j-1})] \leq \beta_W\beta_h
+$$
+
+where $$\beta_W \text{, } \beta_h$$ are the upper bounds of the norms of $$W \text{and } diag[f^\prime]$$. So,
+
+$$
+\|\dfrac {\partial h_t} {\partial h_k}\| = \| \Pi_{j=k+1}^{t} \dfrac {\partial h_j}{\partial h_{j-1}} \| \leq (\beta_W\beta_h)^{t-k}
+$$
+
+which could easily become very large or very small.
+
+Vanishing gradient could actually do harm to learning process. The error at a time step ideally can tell a previous time step from
+ many steps away to change during backprop. When vanishing gradient happens, information from time steps far away are not taken into 
+consideration.In language modelling training, given sentence:
+```
+Jane walked into the room. John walked in too. It was late in the day. Jane said hi to (?)
+```
+We can easily find out that the qustion mark should be `Jane`, however this `Jane` depends on the word 16-time-step away. It is hard for
+the error signal to flow that long range of  time steps.
+
+ 
 
 ### Multiple Time Scales
 
 One way to deal with long-term dependencies is to design a model that operates at multiple time scales, so that some parts of the model operate at fine-grained time scales and can handle small details, while other parts operate at coarse time scales and transfer information from the distant past to the present more efficiently.
 
-1. ** Adding Skip Connections through Time: **add direct connections from variables in the distant past to variables in the present.
+1. **Adding Skip Connections through Time:** add direct connections from variables in the distant past to variables in the present.
 
-2. ** Leaky Units**
+2. **Leaky Units:**
+When we accumulate a running average $$μ_t$$ of some value $$v_t$$ by applying the update $$μ_t ← αμ_{t−1} + (1 − α)v_t$$ the $$α$$ parameter is an example of a linear self-connection from $$μ_{t−1}$$ 
+to $$μ_{t}$$. Leaky units are hidden units with linear self-connections. A leak unit in rnn could be represented as $$h_{t,i} = α_ih_{t−1,i} + (1 − α_i)F_i(h_{t−1}, x_{t})$$
+The standard RNN corresponds to $$α_i = 0$$, while here different values of $$α_i$$ were randomly sampled from $$(0.02, 0.2)$$, allowing some units to react quickly while others 
+are forced to change slowly, but also propagate signals and gradients further in time. Note that because $$α < 1$$, the vanishing effect is still present (and gradients can still explode via $$F$$), 
+but the time-scale of the vanishing effect can be expanded.
 
-When we accumulate a running average $$μ^(t)$$ of some value $$v^(t)$$ by applying the update $$μ^{(t)} ← αμ^{(t−1)} + (1 − α)v^{(t)}$$ the $$α$$ parameter is an example of a linear self-connection from $$μ^{(t−1)}$$ to $$μ^{(t)}$$. Leaky units are hidden units with linear self-connections. A leak unit in rnn could be represented as $$h_{t,i} = α_ih_{t−1,i} + (1 − α_i)F_i(h_{t−1}, x_{t})$$.
+3. **Remove Connections:** remove length-one connections and replace them with longer connections
 
-The standard RNN corresponds to $$α_i = 0$$, while here different values of $$α_i$$ were randomly sampled from $$(0.02, 0.2)$$, allowing some units to react quickly while others are forced to change slowly, but also propagate signals and gradients further in time. Note that because $$α < 1$$, the vanishing effect is still present (and gradients can still explode via $$F$$), but the time-scale of the vanishing effect can be expanded.
+### LSTM
 
-3. ** Remove Connections: ** remove length-one connections and replace them with longer connections
+Like leaky units, gated RNNs(long short-term memory and networks based on the gated recurrent unit etc.) are based on the idea of creating paths through time that have derivatives that
+ neither vanish nor explode. Leaky units did this with connection weights that were either manually chosen constants or were parameters. Gated RNNs generalize this to connection weights 
+that may change at each time step(conditioned on the context).
 
- ### LSTM
-
-Like leaky units, gated RNNs(long short-term memory and networks based on the gated recurrent unit etc.) are based on the idea of creating paths through time that have derivatives that neither vanish nor explode. Leaky units did this with connection weights that were either manually chosen constants or were parameters. Gated RNNs generalize this to connection weights that may change at each time step(conditioned on the context).
-
-![vallina rnn](images/vallina_rnn.png)
-
-
-
-![LSTM](images/lstm.png)
-
-self loop: $$s_i^{(t)} = f_i^{(t)}s_i^{(t-1)} + g_i^{(t)}{\sigma(b_i + W_i[h^{(t-1)}, x^{(t)}])}
+A LSTM unit consists of a memory cell $$c_t$$, an *input gate* $$i_t$$, a *forget gate* $$f_t$$, and an *output gate* $$o_t$$. The memory cell caries the memory content of a LSTM unit, while 
+the gates control the amount of changes to and exposure of the memory content. The content of the memory cell $$C_t$$ at time-step $$t$$ is update similar to the form of a gated
+ leaky neuron.
 
 $$
+C_t = f_tC_{t-1} + i_t\tilde{C}_t
+$$
 
-output state: $$h_i^{(t)} = tanh(s_i^{(t)})q_i^{(t)} $$
+where $$\tilde{C}$$ is the candidate memory:
 
-forget gate: $$f_i^{(t)} = \sigma(b_i^f + W_i^f[h^{(t-1)}, x^{(t)}])$$
+$$
+\tilde{C_t} = tanh(Wh_{t-1} + W_{[x]}x_t)
+$$
 
+Gates are all sigmoid functions of affined transformation on current input $$x_t$$ and last hidden state $$h_{t-1}$$
 
+$$
+\begin{align}
+f_t &= \sigma(W_{f}h_{t-1} + U_fx_t + b_f) \\
+i_t &= \sigma(W_ih_{t-1} + U_ix_t + b_i) \\
+\end{align}
+$$
 
-external input gate: $$g_i^{(t)} = \sigma(b_i^g + W_i^g[h^{(t-1)}, x^{(t)}])$$
+The final hidden state of $$h_t$$ could be computed as
 
+$$
+h_t = o_ttanh(C_t)
+$$
 
-
-output gate: $$q_i^{(t)} = \sigma(b_i^o + W_i^o[h^{(t-1)}, x^{(t)}]) $$
-
-注:
-
-1. 上面公式中$$[a, b]$$代表连接$$a, b $$两个列表， $$[(1,2), (2,3)] = (1,2,2,3)$$
-
-2. deep learning一书中并不是将$$h^{(t-1)}$$和$$x^{(t)}$$做连接，而是对他们两个各有一套参数
+where $$o_t = \sigma(W_oh_{t-1} + U_ox_t + b_o)$$
 
 ### GRU
-dl book P414 下方三个公式
+GRU is more like a leaky unit, except that $$\alpha$$ now becomes  trainable and depend on the context.
 
-### Explicit Memory
+$$
+h_t = (1-z_t)h_{t-1} + z_t\tilde{h_t}
+$$
 
-![key-values memory network](images/kvmn.png)
+where $$\tilde{h_t}$$ is the new candidate memory 
 
-MemNNs are class of models which have four component networks \(which may or may not have shared parameters\):
+$$ 
+\tilde{h_t} = tanh(r_t \odot Wh_{t-1} + W_{[x]}x_t)
+$$
 
-I: \(input feature map\) convert incoming data to the internal feature representation.
+$$z_t$$ are called *update gate*, $$r_t$$ are called *reset gate*.
 
-G: \(generalization\) update memories given new input.
+$$
+\begin{align}
+z_t &= \sigma(W_zh_{t-1} + U_zx_t + b_z) \\
+r_t &= \sigma(W_rh_{t-1} + u_rx_t + b_r) \\
+\end{align}
+$$
 
-O: produce new output \(in feature representation space\) given the memories.
 
-R: \(response\) convert output O into a response seen by the outside world.
+### Trick for exploding gradient: clipping trick
+The intuition is simple, we set a *threshold* to the gradient, make the absolute value of gradient no larger than the threshold.
+```python
+if math.abs(gradient) > threshold:
+    gradient = threshold if gradient > 0 else -threshold
+```
+
+
 
 
 
 ## Reference
 
-
-
 1. Bengio et al. Deep Learning, chapter 10 Sequence Modeling: Recurrent and Recursive Nets
-
-2. Bengio et al. [A Neural Probabilistic Language Model](http://www.jmlr.org/papers/volume3/bengio03a/bengio03a.pdf)
-
-3. Bengio [Advances in optimizing recurrent networks](http://120.52.73.81/arxiv.org/pdf/1212.0901.pdf)
-
-4. Mikolov et al. [Recurrent neural network based language model](http://www.fit.vutbr.cz/research/groups/speech/publi/2010/mikolov_interspeech2010_IS100722.pdf)
-
-5. Socher [cs224d classnotes](http://cs224d.stanford.edu/lectures/CS224d-Lecture8.pdf)
-
-6. [The Unreasonable Effectiveness of Recurrent Neural Networks](http://karpathy.github.io/2015/05/21/rnn-effectiveness/)
-
-7.
-
-
-
-
+2. Bengio [Advances in optimizing recurrent networks](http://120.52.73.81/arxiv.org/pdf/1212.0901.pdf)
+3. Socher [cs224d classnotes](http://cs224d.stanford.edu/lectures/CS224d-Lecture8.pdf)
+4. Bengio et al. [Gated Feedback Recurrent Neural Networks](http://arxiv.org/pdf/1502.02367v3.pdf)
