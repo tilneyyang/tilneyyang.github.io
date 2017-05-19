@@ -1,6 +1,6 @@
-# 对话机器人平台: wit.ai和yige.ai调研
-
-
+---
+layout: default
+---
 一个典型的对话系统架构如下图所示
 
 ![conversational agent architecture](/assets/img/conversational-agents.png)
