@@ -54,13 +54,16 @@ We say that the speaker that is in control of the conversation has the initiativ
 ### Prompt Type
   * An **open prompt** is one in which the system gives the user very few constraints, allowing the user to respond however they please.
   * A **directive prompt** is one which explicitly instructs the user how to respond: *Say yes if you accept the call; otherwise, say no.*
+  
+  
 
-
- | ||Prompt Type|
+ |  | |Prompt Type|
  | ------ | ------ | ------ |
  | Grammar| Open| Direct |
  |Restrictive| *don't make scense*|System Initiative|
- |Non-restrictive|User Initiative| Mixed Initiative|                                                                                                                                                                                                      
+ |Non-restrictive|User Initiative| Mixed Initiative| 
+                                                                                                                                                                                                      
+
 Table 1: Operational definition of initiative
 
 

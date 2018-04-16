@@ -5,6 +5,7 @@ layout: default
 [[paper](https://cs.umd.edu/~miyyer/pubs/2014_qb_rnn.pdf)]
 
 `This paper note is for group sharing.`
+
 ## Novelty and Contribution
 
  * Text classification based methods based on manually defined string matching or bag of words representations are ineffective on questions with very few individual words(eg. named entities), this paper introduce a dependency tree  recursive neural network(DT-RNN) model that can reason over such questions by modeling textual compositionality;
